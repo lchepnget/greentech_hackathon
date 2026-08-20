@@ -1,0 +1,6 @@
+import {api} from './client'; import type {User,Listing,Order,Wallet,Transaction,Invoice,Paginated,Role} from '$lib/types';
+export const auth={login:(email:string,password:string)=>api<{user:User}>('/auth/login',{method:'POST',body:JSON.stringify({email,password})}),register:(data:{email:string;password:string;name:string;role:Role})=>api<{user:User}>('/auth/register',{method:'POST',body:JSON.stringify(data)}),me:()=>api<User>('/auth/me')};
+export const listings={all:(query='')=>api<Paginated<Listing>>(`/listings${query}`),one:(id:string)=>api<Listing>(`/listings/${id}`),create:(data:FormData)=>api<Listing>('/listings',{method:'POST',body:data})};
+export const orders={all:()=>api<Order[]>('/orders'),create:(listingId:string,quantity:number)=>api<Order>('/orders',{method:'POST',body:JSON.stringify({listingId,quantity})})};
+export const wallet={get:()=>api<Wallet>('/wallet'),transactions:()=>api<Transaction[]>('/wallet/transactions'),deposit:(amountSats:number)=>api<Invoice>('/wallet/deposit',{method:'POST',body:JSON.stringify({amountSats})}),withdraw:(bolt11:string)=>api<Transaction>('/wallet/withdraw',{method:'POST',body:JSON.stringify({bolt11})})};
+export const users={update:(data:Partial<User>)=>api<User>('/users/me',{method:'PATCH',body:JSON.stringify(data)})};
