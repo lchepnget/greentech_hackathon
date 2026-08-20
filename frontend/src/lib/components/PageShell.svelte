@@ -1,0 +1,1 @@
+<script lang="ts">import TopNav from './TopNav.svelte'; let {eyebrow,title,children}= $props<{eyebrow:string,title:string,children:any}>();</script><TopNav/><main class="page wrap"><header class="page-head"><p class="eyebrow">{eyebrow}</p><h1>{title}</h1></header>{@render children()}</main>
