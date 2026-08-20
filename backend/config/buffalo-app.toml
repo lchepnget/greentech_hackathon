@@ -8,6 +8,6 @@ with_webpack = false
 with_nodejs = false
 with_yarn = false
 with_docker = true
-with_grifts = true
+with_grifts = false
 as_web = false
 as_api = true
