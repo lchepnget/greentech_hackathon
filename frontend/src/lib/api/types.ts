@@ -1,0 +1,2 @@
+export type Role='farmer'|'producer'; export interface User{id:string;name:string;email:string;role:Role} export interface Listing{id:string;title:string;producerName:string;wasteType:string;quantity:number;unit:string;priceSats:number;location:string;description?:string} export interface Order{id:string;listing:Listing;quantity:number;amountSats:number;status:string;createdAt:string}
+export interface MarketplaceSummary{totalSatsMoved:number;newListings:number;regions:string[]}

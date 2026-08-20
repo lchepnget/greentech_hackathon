@@ -1,0 +1,2 @@
+const base = import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+export async function api<T>(path:string, init:RequestInit={}) : Promise<T> { const isForm=typeof FormData!=='undefined' && init.body instanceof FormData; const headers=isForm?{...(init.headers||{})}:{'Content-Type':'application/json',...(init.headers||{})}; const r=await fetch(`${base}${path}`,{...init,headers}); if(!r.ok) throw new Error(`Request failed (${r.status})`); return r.json(); }
