@@ -14,6 +14,8 @@ import (
 )
 
 type RegisterRequest struct {
+	Name      string `json:"name"`
+	Role      string `json:"role"`
 	Username  string `json:"username"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
@@ -23,6 +25,7 @@ type RegisterRequest struct {
 
 type LoginRequest struct {
 	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -36,6 +39,12 @@ func RegisterHandler(c buffalo.Context) error {
 	}
 
 	req.Username = strings.TrimSpace(req.Username)
+	if req.Username == "" {
+		req.Username = strings.TrimSpace(req.Email)
+	}
+	if req.FirstName == "" {
+		req.FirstName = strings.TrimSpace(req.Name)
+	}
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
@@ -90,13 +99,12 @@ func RegisterHandler(c buffalo.Context) error {
 		}))
 	}
 
-	return c.Render(http.StatusCreated, r.JSON(map[string]interface{}{
+	return c.Render(http.StatusCreated, r.JSON(map[string]interface{}{"user": map[string]interface{}{
 		"id":         user.ID,
-		"username":   user.Username,
+		"name":       strings.TrimSpace(user.FirstName + " " + user.LastName),
 		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
-	}))
+		"role":       req.Role,
+	}}))
 }
 
 func LoginHandler(c buffalo.Context) error {
@@ -109,6 +117,9 @@ func LoginHandler(c buffalo.Context) error {
 	}
 
 	if req.Username == "" || req.Password == "" {
+		req.Username = strings.TrimSpace(req.Email)
+	}
+	if req.Username == "" || req.Password == "" {
 		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
 			"error": "username and password are required",
 		}))
@@ -117,7 +128,7 @@ func LoginHandler(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
 
 	user := &models.User{}
-	if err := tx.Where("username = ?", req.Username).First(user); err != nil {
+	if err := tx.Where("username = ? OR email = ?", req.Username, strings.ToLower(req.Username)).First(user); err != nil {
 		return c.Render(http.StatusUnauthorized, r.JSON(map[string]string{
 			"error": "invalid username or password",
 		}))
@@ -131,13 +142,12 @@ func LoginHandler(c buffalo.Context) error {
 
 	c.Session().Set("user_id", user.ID.String())
 
-	return c.Render(http.StatusOK, r.JSON(map[string]interface{}{
+	return c.Render(http.StatusOK, r.JSON(map[string]interface{}{"user": map[string]interface{}{
 		"id":         user.ID,
-		"username":   user.Username,
+		"name":       strings.TrimSpace(user.FirstName + " " + user.LastName),
 		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
-	}))
+		"role":       "farmer",
+	}}))
 }
 
 func MeHandler(c buffalo.Context) error {
@@ -154,10 +164,9 @@ func MeHandler(c buffalo.Context) error {
 
 	return c.Render(http.StatusOK, r.JSON(map[string]interface{}{
 		"id":         user.ID,
-		"username":   user.Username,
+		"name":       strings.TrimSpace(user.FirstName + " " + user.LastName),
 		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
+		"role":       "farmer",
 	}))
 }
 
