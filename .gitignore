@@ -1,0 +1,24 @@
+# Binaries
+/financial-gateway
+greentech-backend
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Environment variables
+.env
+.env.local
+
+# Node modules & build artifacts
+node_modules/
+.svelte-kit/
+build/
+.output/
