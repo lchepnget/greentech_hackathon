@@ -128,6 +128,27 @@ func LoginHandler(c buffalo.Context) error {
 	}))
 }
 
+func MeHandler(c buffalo.Context) error {
+	userID := c.Value("user_id").(uuid.UUID)
+
+	tx := c.Value("tx").(*pop.Connection)
+
+	user := &models.User{}
+	if err := tx.Find(user, userID); err != nil {
+		return c.Render(http.StatusNotFound, r.JSON(map[string]string{
+			"error": "user not found",
+		}))
+	}
+
+	return c.Render(http.StatusOK, r.JSON(map[string]interface{}{
+		"id":         user.ID,
+		"username":   user.Username,
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+	}))
+}
+
 func LogoutHandler(c buffalo.Context) error {
 	c.Session().Delete("user_id")
 
