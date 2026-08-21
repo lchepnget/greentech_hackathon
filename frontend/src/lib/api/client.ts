@@ -1,2 +1,49 @@
 const base = import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
-export async function api<T>(path:string, init:RequestInit={}) : Promise<T> { const isForm=typeof FormData!=='undefined' && init.body instanceof FormData; const headers=isForm?{...(init.headers||{})}:{'Content-Type':'application/json',...(init.headers||{})}; const r=await fetch(`${base}${path}`,{...init,headers,credentials:'include'}); if(r.status===401 && typeof window!=='undefined' && !path.startsWith('/auth/')) { window.dispatchEvent(new CustomEvent('regenfeed:unauthorized')); } if(!r.ok){let message=`Request failed (${r.status})`; try{const body=await r.json();message=typeof body?.error==='string'?body.error:body?.error?.message||body?.message||message}catch{} throw new Error(message)} return r.status===204?undefined as T:r.json(); }
+const REQUEST_TIMEOUT_MS = 15_000;
+
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+	const abortFromCaller = () => controller.abort();
+	init.signal?.addEventListener('abort', abortFromCaller, { once: true });
+
+	try {
+		const isForm = typeof FormData !== 'undefined' && init.body instanceof FormData;
+		const headers = isForm
+			? { ...(init.headers || {}) }
+			: { 'Content-Type': 'application/json', ...(init.headers || {}) };
+		const response = await fetch(`${base}${path}`, {
+			...init,
+			headers,
+			credentials: 'include',
+			signal: controller.signal
+		});
+
+		if (response.status === 401 && typeof window !== 'undefined' && !path.startsWith('/auth/')) {
+			window.dispatchEvent(new CustomEvent('regenfeed:unauthorized'));
+		}
+
+		if (!response.ok) {
+			let message = `Request failed (${response.status})`;
+			try {
+				const body = await response.json();
+				message = typeof body?.error === 'string'
+					? body.error
+					: body?.error?.message || body?.message || message;
+			} catch {
+				// Keep the HTTP status message when no JSON error body is available.
+			}
+			throw new Error(message);
+		}
+
+		return response.status === 204 ? undefined as T : response.json();
+	} catch (error) {
+		if (error instanceof DOMException && error.name === 'AbortError') {
+			throw new Error('The server took too long to respond. Please try again.');
+		}
+		throw error;
+	} finally {
+		clearTimeout(timeout);
+		init.signal?.removeEventListener('abort', abortFromCaller);
+	}
+}
