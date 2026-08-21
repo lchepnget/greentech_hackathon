@@ -20,6 +20,11 @@ type RegisterRequest struct {
 	LastName  string `json:"last_name"`
 }
 
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 func RegisterHandler(c buffalo.Context) error {
 	var req RegisterRequest
 
@@ -74,6 +79,45 @@ func RegisterHandler(c buffalo.Context) error {
 	}
 
 	return c.Render(http.StatusCreated, r.JSON(map[string]interface{}{
+		"id":         user.ID,
+		"username":   user.Username,
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+	}))
+}
+
+func LoginHandler(c buffalo.Context) error {
+	var req LoginRequest
+
+	if err := c.Bind(&req); err != nil {
+		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
+			"error": "invalid request body",
+		}))
+	}
+
+	if req.Username == "" || req.Password == "" {
+		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
+			"error": "username and password are required",
+		}))
+	}
+
+	tx := c.Value("tx").(*pop.Connection)
+
+	user := &models.User{}
+	if err := tx.Where("username = ?", req.Username).First(user); err != nil {
+		return c.Render(http.StatusUnauthorized, r.JSON(map[string]string{
+			"error": "invalid username or password",
+		}))
+	}
+
+	if !services.CheckPassword(req.Password, user.PasswordHash) {
+		return c.Render(http.StatusUnauthorized, r.JSON(map[string]string{
+			"error": "invalid username or password",
+		}))
+	}
+
+	return c.Render(http.StatusOK, r.JSON(map[string]interface{}{
 		"id":         user.ID,
 		"username":   user.Username,
 		"email":      user.Email,
