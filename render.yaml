@@ -9,9 +9,9 @@ services:
     runtime: go
     rootDir: backend
     plan: free
-    buildCommand: go build -o bin/regenfeed ./cmd/app && go build -o bin/migrate ./cmd/migrate
-    preDeployCommand: ./bin/migrate
-    startCommand: ./bin/regenfeed
+    buildCommand: cd backend && go build -o bin/regenfeed ./cmd/app && go build -o bin/migrate ./cmd/migrate
+    preDeployCommand: cd backend && ./bin/migrate
+    startCommand: cd backend && ./bin/regenfeed
     healthCheckPath: /api/listings/summary/
     envVars:
       - key: GO_ENV

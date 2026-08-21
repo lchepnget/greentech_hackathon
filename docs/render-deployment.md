@@ -16,6 +16,15 @@ The repository includes a Render Blueprint in `render.yaml`. It creates:
    - Frontend `PUBLIC_API_BASE_URL` to `https://regenfeed-api.onrender.com` (use the actual generated backend URL; `/api` is added automatically).
 5. Redeploy both services after saving those two URLs.
 
+If you created the services manually, set the API service **Root Directory** to
+`backend`, or use these commands exactly:
+
+```text
+Build:  cd backend && go build -o bin/regenfeed ./cmd/app && go build -o bin/migrate ./cmd/migrate
+Pre-deploy: cd backend && ./bin/migrate
+Start: cd backend && ./bin/regenfeed
+```
+
 ## Required backend secrets
 
 - `BLINK_API_KEY`
