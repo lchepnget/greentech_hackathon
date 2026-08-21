@@ -2,6 +2,7 @@ package actions
 
 import (
 	"net/http"
+	"strings"
 
 	"backend/models"
 	"backend/services"
@@ -59,12 +60,18 @@ func RegisterHandler(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
 
 	if err := tx.Create(user); err != nil {
-    c.Logger().Errorf("failed to create user: %v", err)
+		c.Logger().Errorf("failed to create user: %v", err)
 
-    return c.Render(http.StatusInternalServerError, r.JSON(map[string]string{
-        "error": err.Error(),
-    }))
-}
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return c.Render(http.StatusConflict, r.JSON(map[string]string{
+				"error": "username or email already exists",
+			}))
+		}
+
+		return c.Render(http.StatusInternalServerError, r.JSON(map[string]string{
+			"error": "failed to create user",
+		}))
+	}
 
 	return c.Render(http.StatusCreated, r.JSON(map[string]interface{}{
 		"id":         user.ID,
