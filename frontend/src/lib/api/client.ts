@@ -1,5 +1,7 @@
-const base = import.meta.env.PUBLIC_API_BASE_URL ||
-	(typeof window !== 'undefined' ? `http://${window.location.hostname}:3000/api` : 'http://localhost:3000/api');
+const configuredBase = import.meta.env.PUBLIC_API_BASE_URL?.replace(/\/$/, '');
+const base = configuredBase
+	? `${configuredBase.includes('://') ? configuredBase : `https://${configuredBase}`}${configuredBase.endsWith('/api') ? '' : '/api'}`
+	: (typeof window !== 'undefined' ? `http://${window.location.hostname}:3001/api` : 'http://localhost:3001/api');
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {

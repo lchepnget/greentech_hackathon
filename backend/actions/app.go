@@ -3,6 +3,7 @@ package actions
 import (
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 
 	"backend/locales"
@@ -103,6 +104,13 @@ func corsMiddleware(next buffalo.Handler) buffalo.Handler {
 	return func(c buffalo.Context) error {
 		origin := c.Request().Header.Get("Origin")
 		allowedOrigin := origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173"
+		configuredOrigin := strings.TrimRight(envy.Get("FRONTEND_ORIGIN", ""), "/")
+		if configuredOrigin != "" && !strings.Contains(configuredOrigin, "://") {
+			configuredOrigin = "https://" + configuredOrigin
+		}
+		if configuredOrigin != "" && origin == configuredOrigin {
+			allowedOrigin = true
+		}
 		if ENV != "production" && origin != "" {
 			if parsed, err := url.Parse(origin); err == nil && parsed.Scheme == "http" && parsed.Port() == "5173" {
 				allowedOrigin = true

@@ -31,6 +31,16 @@
 		finally{submitting=false}
 	}
 
+	function openBlinkWallet(bolt11:string){
+		if(!bolt11)return;
+		const uri=`lightning:${bolt11}`;
+		window.location.assign(uri);
+		setTimeout(async()=>{
+			try{await navigator.clipboard?.writeText(bolt11);success='Invoice copied. Paste it into Blink if it did not open automatically.'}
+			catch{success='Open Blink and paste the displayed invoice.'}
+		},900);
+	}
+
 	async function deposit(){
 		error='';success='';depositInvoice=null;
 		if(!depositSats||depositSats<1){error='Enter a positive deposit amount in sats.';return}
@@ -65,7 +75,7 @@
 					<img src={`https://quickchart.io/qr?text=${encodeURIComponent(depositInvoice.bolt11)}&size=180`} alt="Blink deposit invoice QR code" />
 					<code>{depositInvoice.bolt11}</code>
 					<strong>{depositInvoice.amountSats.toLocaleString()} sats</strong>
-					<a class="btn primary" href={`lightning:${depositInvoice.bolt11}`}>Open in Blink wallet ↗</a>
+					<button type="button" class="btn primary" onclick={()=>openBlinkWallet(depositInvoice?.bolt11 || '')}>Open in Blink wallet ↗</button>
 				</div>
 			{/if}
 		</form>
