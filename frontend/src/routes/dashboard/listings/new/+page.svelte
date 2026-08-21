@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import { listings } from '$lib/api';
+	import { session } from '$lib/stores/session';
 
 	let title = $state('');
 	let wasteType = $state('');
@@ -48,7 +49,7 @@
 		files.forEach((f) => data.append('photos', f));
 
 		try {
-			await listings.create(data);
+			await listings.create({name:title,description,priceSats:Number(price)});
 			await goto('/dashboard');
 		} catch (e) {
 			status = e instanceof Error ? e.message : 'Upload failed. Please try again.';
@@ -56,7 +57,7 @@
 	}
 </script>
 
-<PageShell eyebrow="FARMER LISTINGS" title="List your surplus.">
+{#if $session?.role !== 'producer'}<PageShell eyebrow="PRODUCER ACCESS" title="Listing unavailable"><p class="alert">Only Producers can create listings.</p></PageShell>{:else}<PageShell eyebrow="PRODUCER LISTINGS" title="List your surplus.">
 	<div class="form-card listing-form">
 		<p class="state">Add clear photos so buyers can check quality before ordering.</p>
 		<label>Listing title<input bind:value={title} placeholder="Fresh vegetable trimmings" required /></label>
@@ -78,3 +79,4 @@
 		</button>
 	</div>
 </PageShell>
+{/if}

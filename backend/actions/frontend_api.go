@@ -47,6 +47,14 @@ func FrontendListingByID(c buffalo.Context) error {
 	return c.Render(http.StatusNotFound, r.JSON(map[string]string{"error": "listing not found"}))
 }
 func FrontendCreateListing(c buffalo.Context) error {
+	userID, ok := c.Value("user_id").(uuid.UUID)
+	if !ok {
+		return c.Render(http.StatusUnauthorized, r.JSON(map[string]string{"error": "authentication required"}))
+	}
+	var user models.User
+	if err := models.DB.Find(&user, userID); err != nil || strings.ToUpper(user.Role) != "PRODUCER" {
+		return c.Render(http.StatusForbidden, r.JSON(map[string]string{"error": "only producers may create listings"}))
+	}
 	x := map[string]interface{}{}
 	if strings.HasPrefix(c.Request().Header.Get("Content-Type"), "multipart/form-data") {
 		if err := c.Request().ParseMultipartForm(10 << 20); err != nil {
@@ -75,6 +83,57 @@ func FrontendCreateListing(c buffalo.Context) error {
 	frontStore.listings = append(frontStore.listings, x)
 	frontStore.Unlock()
 	return c.Render(http.StatusCreated, r.JSON(x))
+}
+
+func HandleCreateListingInvoice(c buffalo.Context) error {
+	userID, ok := c.Value("user_id").(uuid.UUID)
+	if !ok {
+		return c.Render(401, r.JSON(map[string]string{"error": "authentication required"}))
+	}
+	var user models.User
+	if err := models.DB.Find(&user, userID); err != nil || strings.ToUpper(user.Role) != "PRODUCER" {
+		return c.Render(403, r.JSON(map[string]string{"error": "only producers may create listings"}))
+	}
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		PriceSats   int64  `json:"priceSats"`
+	}
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil || strings.TrimSpace(req.Name) == "" || req.PriceSats < 1 {
+		return c.Render(400, r.JSON(map[string]string{"error": "name, description and positive priceSats are required"}))
+	}
+	inv, err := createBlinkDepositInvoice(c.Request().Context(), req.PriceSats)
+	if err != nil {
+		return c.Render(502, r.JSON(map[string]string{"error": "unable to create Blink invoice"}))
+	}
+	x := map[string]interface{}{"id": fmt.Sprintf("listing_%d", time.Now().UnixNano()), "ownerId": userID.String(), "producerName": strings.TrimSpace(user.FirstName + " " + user.LastName), "title": req.Name, "description": req.Description, "priceSats": req.PriceSats, "bolt11": inv.PaymentRequest, "status": "active"}
+	frontStore.Lock()
+	frontStore.listings = append(frontStore.listings, x)
+	frontStore.Unlock()
+	return c.Render(201, r.JSON(x))
+}
+
+func HandleVerifyPayment(c buffalo.Context) error {
+	userID, ok := c.Value("user_id").(uuid.UUID)
+	if !ok {
+		return c.Render(401, r.JSON(map[string]string{"error": "authentication required"}))
+	}
+	var user models.User
+	if err := models.DB.Find(&user, userID); err != nil || strings.ToUpper(user.Role) != "FARMER" {
+		return c.Render(403, r.JSON(map[string]string{"error": "only farmers may pay invoices"}))
+	}
+	var req struct {
+		Bolt11 string `json:"bolt11"`
+	}
+	_ = json.NewDecoder(c.Request().Body).Decode(&req)
+	frontStore.RLock()
+	defer frontStore.RUnlock()
+	for _, x := range frontStore.listings {
+		if x["bolt11"] == req.Bolt11 {
+			return frontJSON(c, map[string]interface{}{"bolt11": req.Bolt11, "status": "pending", "settled": false})
+		}
+	}
+	return c.Render(404, r.JSON(map[string]string{"error": "invoice not found"}))
 }
 func FrontendOrders(c buffalo.Context) error {
 	userID, _ := c.Value("user_id").(uuid.UUID)
