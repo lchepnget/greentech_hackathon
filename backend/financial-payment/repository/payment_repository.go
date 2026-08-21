@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"financial-gateway/internal/financial-gateway/models"
+	"financial-gateway/backend/financial-payment/models"
 )
 
 // Common repository errors

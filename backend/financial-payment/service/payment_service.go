@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"financial-gateway/internal/financial-gateway/infrastructure/lightning"
-	"financial-gateway/internal/financial-gateway/infrastructure/mpesa"
-	"financial-gateway/internal/financial-gateway/models"
-	"financial-gateway/internal/financial-gateway/repository"
+	"financial-gateway/backend/financial-payment/infrastructure/lightning"
+	"financial-gateway/backend/financial-payment/infrastructure/mpesa"
+	"financial-gateway/backend/financial-payment/models"
+	"financial-gateway/backend/financial-payment/repository"
 )
 
 // PaymentService coordinates business logic between M-Pesa, Lightning, persistence, and audit logging

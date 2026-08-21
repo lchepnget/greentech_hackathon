@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"financial-gateway/internal/financial-gateway/models"
-	"financial-gateway/internal/financial-gateway/service"
+	"financial-gateway/backend/financial-payment/models"
+	"financial-gateway/backend/financial-payment/service"
 )
 
 // In-memory mock store for marketplace listings, orders and demo user
