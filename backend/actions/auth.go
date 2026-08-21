@@ -6,6 +6,7 @@ import (
 
 	"backend/models"
 	"backend/services"
+	"backend/utils"
 
 	"github.com/gobuffalo/buffalo"
 	"github.com/gobuffalo/pop/v6"
@@ -34,9 +35,20 @@ func RegisterHandler(c buffalo.Context) error {
 		}))
 	}
 
+	req.Username = strings.TrimSpace(req.Username)
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.FirstName = strings.TrimSpace(req.FirstName)
+	req.LastName = strings.TrimSpace(req.LastName)
+
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
 			"error": "username, email and password are required",
+		}))
+	}
+
+	if !utils.IsValidEmail(req.Email) {
+		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
+			"error": "invalid email address",
 		}))
 	}
 
