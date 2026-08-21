@@ -53,14 +53,19 @@ func RegisterHandler(c buffalo.Context) error {
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
 	req.Role = strings.ToLower(strings.TrimSpace(req.Role))
+	req.LightningAddress = strings.ToLower(strings.TrimSpace(req.LightningAddress))
 	if req.Role == "" {
 		req.Role = "farmer"
 	}
 
-	if req.Username == "" || req.Email == "" || req.Password == "" {
+	if req.Username == "" || req.Email == "" || req.Password == "" || req.LightningAddress == "" {
 		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
-			"error": "username, email and password are required",
+			"error": "username, email, password and Blink Lightning Address are required",
 		}))
+	}
+	addressParts := strings.Split(req.LightningAddress, "@")
+	if len(addressParts) != 2 || addressParts[0] == "" || !strings.Contains(addressParts[1], ".") {
+		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{"error": "invalid Blink Lightning Address"}))
 	}
 
 	if !utils.IsValidEmail(req.Email) {

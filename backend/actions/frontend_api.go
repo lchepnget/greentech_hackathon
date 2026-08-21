@@ -106,7 +106,10 @@ func HandleCreateListingInvoice(c buffalo.Context) error {
 	if err != nil {
 		return c.Render(502, r.JSON(map[string]string{"error": "unable to create Blink invoice"}))
 	}
-	x := map[string]interface{}{"id": fmt.Sprintf("listing_%d", time.Now().UnixNano()), "ownerId": userID.String(), "producerName": strings.TrimSpace(user.FirstName + " " + user.LastName), "title": req.Name, "description": req.Description, "priceSats": req.PriceSats, "bolt11": inv.PaymentRequest, "status": "active"}
+	if strings.TrimSpace(inv.PaymentRequest) == "" {
+		return c.Render(http.StatusBadGateway, r.JSON(map[string]string{"error": "Blink returned an empty invoice"}))
+	}
+	x := map[string]interface{}{"id": fmt.Sprintf("listing_%d", time.Now().UnixNano()), "ownerId": userID.String(), "producerName": strings.TrimSpace(user.FirstName + " " + user.LastName), "title": req.Name, "description": req.Description, "priceSats": req.PriceSats, "bolt11": inv.PaymentRequest, "invoice": inv.PaymentRequest, "status": "active"}
 	frontStore.Lock()
 	frontStore.listings = append(frontStore.listings, x)
 	frontStore.Unlock()
@@ -148,6 +151,11 @@ func FrontendOrders(c buffalo.Context) error {
 	return frontJSON(c, items)
 }
 func FrontendCreateOrder(c buffalo.Context) error {
+	userID, _ := c.Value("user_id").(uuid.UUID)
+	var farmer models.User
+	if err := models.DB.Find(&farmer, userID); err != nil || strings.ToUpper(farmer.Role) != "FARMER" {
+		return c.Render(http.StatusForbidden, r.JSON(map[string]string{"error": "only farmers may create orders"}))
+	}
 	var q struct {
 		ListingID string `json:"listingId"`
 		Quantity  int    `json:"quantity"`
@@ -156,8 +164,22 @@ func FrontendCreateOrder(c buffalo.Context) error {
 	if q.Quantity < 1 {
 		q.Quantity = 1
 	}
-	userID, _ := c.Value("user_id").(uuid.UUID)
-	x := map[string]interface{}{"id": fmt.Sprintf("order_%d", time.Now().UnixNano()), "ownerId": userID.String(), "listingId": q.ListingID, "quantity": q.Quantity, "amountSats": q.Quantity * 1000, "status": "pending", "createdAt": time.Now().UTC().Format(time.RFC3339)}
+	frontStore.RLock()
+	var listing map[string]interface{}
+	for _, candidate := range frontStore.listings {
+		if candidate["id"] == q.ListingID {
+			listing = candidate
+			break
+		}
+	}
+	frontStore.RUnlock()
+	if listing == nil {
+		return c.Render(http.StatusNotFound, r.JSON(map[string]string{"error": "listing not found"}))
+	}
+	if listing["ownerId"] == userID.String() {
+		return c.Render(http.StatusForbidden, r.JSON(map[string]string{"error": "cannot order your own listing"}))
+	}
+	x := map[string]interface{}{"id": fmt.Sprintf("order_%d", time.Now().UnixNano()), "ownerId": userID.String(), "listingId": q.ListingID, "quantity": q.Quantity, "amountSats": listing["priceSats"], "bolt11": listing["bolt11"], "status": "pending_payment", "createdAt": time.Now().UTC().Format(time.RFC3339)}
 	frontStore.Lock()
 	frontStore.orders = append(frontStore.orders, x)
 	frontStore.Unlock()
