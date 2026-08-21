@@ -66,6 +66,7 @@ func App() *buffalo.App {
 		app.GET("/", HomeHandler)
 		app.POST("/api/auth/register", RegisterHandler)
 		app.POST("/api/auth/login", LoginHandler)
+		app.POST("/api/auth/logout", LogoutHandler)
 
 		app.ServeFiles("/", http.FS(public.FS())) // serve files from the public directory
 	})

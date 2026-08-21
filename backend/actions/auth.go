@@ -117,11 +117,21 @@ func LoginHandler(c buffalo.Context) error {
 		}))
 	}
 
+	c.Session().Set("user_id", user.ID.String())
+
 	return c.Render(http.StatusOK, r.JSON(map[string]interface{}{
 		"id":         user.ID,
 		"username":   user.Username,
 		"email":      user.Email,
 		"first_name": user.FirstName,
 		"last_name":  user.LastName,
+	}))
+}
+
+func LogoutHandler(c buffalo.Context) error {
+	c.Session().Delete("user_id")
+
+	return c.Render(http.StatusOK, r.JSON(map[string]string{
+		"message": "logged out successfully",
 	}))
 }
