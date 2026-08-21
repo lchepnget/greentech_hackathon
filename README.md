@@ -1,4 +1,4 @@
-# 🌿 RegenFeed — GreenTech Circular Economy & Dual-Rail Financial Gateway
+#  RegenFeed — GreenTech Circular Economy & Dual-Rail Financial Gateway
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5.x-FF3E00?style=flat&logo=svelte)](https://kit.svelte.dev)
@@ -9,9 +9,13 @@
 
 > **Empowering Circular Agriculture**: Transforming hotel and municipal food waste into high-protein Black Soldier Fly (BSF) animal feed and organic bio-fertilizer — powered by a dual-rail financial gateway bridging **Kenyan Shillings (KES)** mobile money with the **Bitcoin Lightning Network (Satoshis)**.
 
+## Live Demo 
+
+https://regenfeed.onrender.com
+
 ---
 
-## 📌 Table of Contents
+##  Table of Contents
 
 - [Overview & Circular Model](#-overview--circular-model)
 - [System Architecture](#-system-architecture)
@@ -30,7 +34,7 @@
 
 ---
 
-## 🌿 Overview & Circular Model
+##  Overview & Circular Model
 
 **RegenFeed** solves two intertwined environmental and economic problems in emerging markets:
 1. **Urban Organic Waste**: Massive quantities of food waste from hotels and restaurants end up in landfills, producing methane and polluting waterways.
@@ -47,7 +51,7 @@
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ```
 ┌──────────────────────────┐                      ┌───────────────────────────┐
@@ -81,28 +85,28 @@
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
 - **⚡ Dual-Rail Payment Engine**:
   - **M-Pesa C2B**: Instant payment notifications, validation, and confirmation webhooks.
   - **M-Pesa B2C**: Automated payout disbursements to collector mobile numbers.
   - **Bitcoin Lightning (Blink)**: Zero-node-ops BOLT11 invoice generation and Lightning Address (`collector@blink.sv`) payouts.
-- **🔄 Real-Time Currency Conversion**:
+- ** Real-Time Currency Conversion**:
   - High-precision live fiat-to-Sats price oracle (`KES ⇄ Sats`).
   - Asynchronous conversion pipelines using Go goroutines with non-blocking confirmation callbacks.
-- **🛡️ Enterprise Reliability & Ledger**:
+- ** Enterprise Reliability & Ledger**:
   - Thread-safe in-memory repository with idempotency deduplication (`TransID` & `PaymentHash`).
   - Immutable audit logs for compliance, dispute resolution, and security tracing.
   - In-process background sweeper for expiring old invoices and cleaning up in-flight states.
   - Dual-rail reconciliation engine identifying anomalies, stuck transactions, and volume discrepancies.
-- **💻 Modern Reactive Frontend**:
+- ** Modern Reactive Frontend**:
   - Built with **SvelteKit 5** (Runes reactivity) and **TypeScript**.
   - Fast asset compilation with **Vite**.
   - Responsive marketplace, wallet overview, listing management, and authentication flows.
 
 ---
 
-## 📁 Directory Layout
+##  Directory Layout
 
 ```
 greentech_hackathon/
@@ -166,7 +170,7 @@ greentech_hackathon/
 
 ---
 
-## 💳 Dual-Rail Financial Engine
+##  Dual-Rail Financial Engine
 
 ### State Machine Lifecycle
 Every payment transitions strictly through a finite state machine (FSM):
@@ -179,7 +183,7 @@ $$\text{RECEIVED} \longrightarrow \text{CONVERTING} \longrightarrow \text{PAYOUT
 
 ---
 
-## 📡 API Reference
+##  API Reference
 
 ### 1. Safaricom Daraja M-Pesa Endpoints
 | Method | Path | Description |
@@ -213,7 +217,7 @@ $$\text{RECEIVED} \longrightarrow \text{CONVERTING} \longrightarrow \text{PAYOUT
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 - **Go**: `1.22.x` or higher ([Download](https://golang.org/dl/))
@@ -284,7 +288,7 @@ Access the web application at `http://localhost:5173`.
 
 ---
 
-## 🧪 Testing & Validation
+##  Testing & Validation
 
 ### 1. Run the Go Test Suite
 The backend includes extensive unit and integration tests covering the Sats conversion pipeline, invoice lifecycle, idempotency guards, and state transitions:
@@ -308,7 +312,7 @@ chmod +x test_queries.sh
 
 ---
 
-## 🔒 Security & Idempotency
+##  Security & Idempotency
 
 - **Zero Hardcoded Secrets**: All sensitive keys, secrets, and URLs are loaded via environment variables.
 - **Deduplication Guards**: Webhook endpoints enforce idempotency on `TransID` and `PaymentHash` to prevent double-crediting or duplicate disbursements.
@@ -317,7 +321,7 @@ chmod +x test_queries.sh
 
 ---
 
-## 📚 Documentation Index
+##  Documentation Index
 
 For in-depth specifications, review the docs in `docs/payments/`:
 - [Architecture & Circular Economy Pipeline](docs/payments/architecture.md)
@@ -329,5 +333,5 @@ For in-depth specifications, review the docs in `docs/payments/`:
 
 ---
 
-## 👥 Contributors
+##  Contributors
 Developed for the **GreenTech Hackathon 2026**.
