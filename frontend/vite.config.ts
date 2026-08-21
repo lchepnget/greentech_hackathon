@@ -3,6 +3,9 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	preview: {
+		allowedHosts: ['regenfeed-web.onrender.com']
+	},
 	plugins: [
 		sveltekit({
 			compilerOptions: {
