@@ -1,4 +1,5 @@
-const base = import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+const base = import.meta.env.PUBLIC_API_BASE_URL ||
+	(typeof window !== 'undefined' ? `http://${window.location.hostname}:3000/api` : 'http://localhost:3000/api');
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -40,6 +41,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 	} catch (error) {
 		if (error instanceof DOMException && error.name === 'AbortError') {
 			throw new Error('The server took too long to respond. Please try again.');
+		}
+		if (error instanceof TypeError && error.message.toLowerCase().includes('fetch')) {
+			throw new Error(`Unable to reach the API at ${base}. Check that the backend is running.`);
 		}
 		throw error;
 	} finally {

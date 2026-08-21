@@ -2,6 +2,7 @@ package actions
 
 import (
 	"net/http"
+	"net/url"
 	"sync"
 
 	"backend/locales"
@@ -101,7 +102,13 @@ func App() *buffalo.App {
 func corsMiddleware(next buffalo.Handler) buffalo.Handler {
 	return func(c buffalo.Context) error {
 		origin := c.Request().Header.Get("Origin")
-		if origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173" {
+		allowedOrigin := origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173"
+		if ENV != "production" && origin != "" {
+			if parsed, err := url.Parse(origin); err == nil && parsed.Scheme == "http" && parsed.Port() == "5173" {
+				allowedOrigin = true
+			}
+		}
+		if allowedOrigin {
 			c.Response().Header().Set("Access-Control-Allow-Origin", origin)
 			c.Response().Header().Set("Access-Control-Allow-Credentials", "true")
 			c.Response().Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
