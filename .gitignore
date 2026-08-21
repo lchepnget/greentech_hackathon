@@ -1,3 +1,29 @@
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Go
+bin/
+tmp/
+*.test
+*.out
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+dist/
+=======
 # Binaries
 /financial-gateway
 greentech-backend
