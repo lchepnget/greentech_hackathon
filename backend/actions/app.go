@@ -16,6 +16,7 @@ import (
 	"github.com/gobuffalo/middleware/forcessl"
 	"github.com/gobuffalo/middleware/i18n"
 	"github.com/gobuffalo/middleware/paramlogger"
+	"github.com/gorilla/sessions"
 	"github.com/unrolled/secure"
 )
 
@@ -44,9 +45,22 @@ var (
 // declared after it to never be called.
 func App() *buffalo.App {
 	appOnce.Do(func() {
+		secret := envy.Get("SESSION_SECRET", "")
+		if secret == "" && ENV != "production" {
+			secret = "buffalo-secret"
+		}
+		cookieStore := sessions.NewCookieStore([]byte(secret))
+		cookieStore.Options.HttpOnly = true
+		cookieStore.Options.SameSite = http.SameSiteLaxMode
+		if ENV == "production" {
+			cookieStore.Options.SameSite = http.SameSiteNoneMode
+			cookieStore.Options.Secure = true
+		}
+
 		app = buffalo.New(buffalo.Options{
-			Env:         ENV,
-			SessionName: "_backend_session",
+			Env:          ENV,
+			SessionName:  "_backend_session",
+			SessionStore: cookieStore,
 		})
 		app.Use(corsMiddleware)
 
