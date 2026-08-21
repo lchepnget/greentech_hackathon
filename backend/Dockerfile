@@ -1,44 +1,27 @@
-# This is a multi-stage Dockerfile and requires >= Docker 17.05
-# https://docs.docker.com/engine/userguide/eng-image/multistage-build/
-FROM gobuffalo/buffalo:v0.18.14 as builder
+FROM golang:1.25-alpine AS builder
 
-ENV GOPROXY http://proxy.golang.org
+RUN apk add --no-cache git
 
-RUN mkdir -p /src/backend
 WORKDIR /src/backend
 
-# this will cache the npm install step, unless package.json changes
-ADD package.json .
-ADD yarn.lock .yarnrc.yml ./
-RUN mkdir .yarn
-COPY .yarn .yarn
-RUN yarn install
-# Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
-# cache deps before building and copying source so that we don't need to re-download as much
-# and so that source changes don't invalidate our downloaded layer
+COPY go.mod go.sum ./
 RUN go mod download
 
-ADD . .
-RUN buffalo build --static -o /bin/app
+COPY . .
 
-FROM alpine
-RUN apk add --no-cache bash
+RUN go build -o /bin/app ./cmd/app
+
+FROM alpine:3.22
+
 RUN apk add --no-cache ca-certificates
 
-WORKDIR /bin/
+WORKDIR /bin
 
 COPY --from=builder /bin/app .
 
-# Uncomment to run the binary in "production" mode:
-# ENV GO_ENV=production
-
-# Bind the app to 0.0.0.0 so it can be seen from outside the container
-ENV ADDR=0.0.0.0
+ENV ADDR=0.0.0.0:3000
+ENV GO_ENV=production
 
 EXPOSE 3000
 
-# Uncomment to run the migrations before running the binary:
-# CMD /bin/app migrate; /bin/app
-CMD exec /bin/app
+CMD ["/bin/app"]
