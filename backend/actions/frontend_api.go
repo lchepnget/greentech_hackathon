@@ -8,6 +8,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"backend/models"
+	"github.com/gobuffalo/pop/v6"
+	"github.com/gofrs/uuid"
 )
 
 var frontStore = struct {
@@ -50,15 +54,34 @@ func FrontendCreateListing(c buffalo.Context) error {
 		return c.Render(400, r.JSON(map[string]string{"error": "invalid payload"}))
 	}
 	x["id"] = fmt.Sprintf("listing_%d", time.Now().UnixNano())
+	if userID, ok := c.Value("user_id").(uuid.UUID); ok {
+		x["ownerId"] = userID.String()
+		if tx, ok := c.Value("tx").(*pop.Connection); ok {
+			user := &models.User{}
+			if err := tx.Find(user, userID); err == nil {
+				x["producerName"] = strings.TrimSpace(user.FirstName + " " + user.LastName)
+				if x["location"] == "" {
+					x["location"] = user.Location
+				}
+			}
+		}
+	}
 	frontStore.Lock()
 	frontStore.listings = append(frontStore.listings, x)
 	frontStore.Unlock()
 	return c.Render(http.StatusCreated, r.JSON(x))
 }
 func FrontendOrders(c buffalo.Context) error {
+	userID, _ := c.Value("user_id").(uuid.UUID)
 	frontStore.RLock()
 	defer frontStore.RUnlock()
-	return frontJSON(c, frontStore.orders)
+	items := make([]map[string]interface{}, 0)
+	for _, order := range frontStore.orders {
+		if order["ownerId"] == userID.String() {
+			items = append(items, order)
+		}
+	}
+	return frontJSON(c, items)
 }
 func FrontendCreateOrder(c buffalo.Context) error {
 	var q struct {
@@ -69,7 +92,8 @@ func FrontendCreateOrder(c buffalo.Context) error {
 	if q.Quantity < 1 {
 		q.Quantity = 1
 	}
-	x := map[string]interface{}{"id": fmt.Sprintf("order_%d", time.Now().UnixNano()), "listingId": q.ListingID, "quantity": q.Quantity, "amountSats": q.Quantity * 1000, "status": "pending", "createdAt": time.Now().UTC().Format(time.RFC3339)}
+	userID, _ := c.Value("user_id").(uuid.UUID)
+	x := map[string]interface{}{"id": fmt.Sprintf("order_%d", time.Now().UnixNano()), "ownerId": userID.String(), "listingId": q.ListingID, "quantity": q.Quantity, "amountSats": q.Quantity * 1000, "status": "pending", "createdAt": time.Now().UTC().Format(time.RFC3339)}
 	frontStore.Lock()
 	frontStore.orders = append(frontStore.orders, x)
 	frontStore.Unlock()
@@ -97,10 +121,32 @@ func FrontendInvoiceStatus(c buffalo.Context) error {
 	return c.Render(404, r.JSON(map[string]string{"error": "invoice not found"}))
 }
 func FrontendWallet(c buffalo.Context) error {
-	return frontJSON(c, map[string]interface{}{"balanceSats": 0})
+	userID, _ := c.Value("user_id").(uuid.UUID)
+	frontStore.RLock()
+	defer frontStore.RUnlock()
+	balance := int64(0)
+	for _, order := range frontStore.orders {
+		if order["ownerId"] == userID.String() {
+			if amount, ok := order["amountSats"].(int); ok {
+				balance -= int64(amount)
+			}
+		}
+	}
+	return frontJSON(c, map[string]interface{}{"balanceSats": balance})
 }
-func FrontendWalletTransactions(c buffalo.Context) error { return frontJSON(c, []interface{}{}) }
-func FrontendWalletDeposit(c buffalo.Context) error      { return FrontendCreateInvoice(c) }
+func FrontendWalletTransactions(c buffalo.Context) error {
+	userID, _ := c.Value("user_id").(uuid.UUID)
+	frontStore.RLock()
+	defer frontStore.RUnlock()
+	items := make([]map[string]interface{}, 0)
+	for _, order := range frontStore.orders {
+		if order["ownerId"] == userID.String() {
+			items = append(items, map[string]interface{}{"id": order["id"], "type": "order_payment", "amountSats": order["amountSats"], "status": order["status"], "createdAt": order["createdAt"]})
+		}
+	}
+	return frontJSON(c, items)
+}
+func FrontendWalletDeposit(c buffalo.Context) error { return FrontendCreateInvoice(c) }
 func FrontendWalletWithdraw(c buffalo.Context) error {
 	return frontJSON(c, map[string]interface{}{"id": fmt.Sprintf("tx_%d", time.Now().UnixNano()), "type": "withdraw", "status": "pending", "amountSats": 0})
 }

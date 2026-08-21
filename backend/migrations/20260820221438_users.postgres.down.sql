@@ -1,1 +1,9 @@
+DROP TABLE IF EXISTS password_reset_tokens;
+DROP TABLE IF EXISTS payment_audit_events;
+DROP TABLE IF EXISTS wallet_transactions;
+DROP TABLE IF EXISTS invoices;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS listings;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS counties;
+DROP FUNCTION IF EXISTS set_updated_at();

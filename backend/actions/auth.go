@@ -14,13 +14,17 @@ import (
 )
 
 type RegisterRequest struct {
-	Name      string `json:"name"`
-	Role      string `json:"role"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	Name             string `json:"name"`
+	Role             string `json:"role"`
+	Username         string `json:"username"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
+	BusinessName     string `json:"businessName"`
+	Phone            string `json:"phone"`
+	Location         string `json:"location"`
+	LightningAddress string `json:"lightningAddress"`
 }
 
 type LoginRequest struct {
@@ -48,6 +52,10 @@ func RegisterHandler(c buffalo.Context) error {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
+	req.Role = strings.ToLower(strings.TrimSpace(req.Role))
+	if req.Role == "" {
+		req.Role = "farmer"
+	}
 
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
@@ -66,6 +74,11 @@ func RegisterHandler(c buffalo.Context) error {
 			"error": "password must be at least 8 characters",
 		}))
 	}
+	if req.Role != "producer" && req.Role != "farmer" {
+		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
+			"error": "role must be producer or farmer",
+		}))
+	}
 
 	passwordHash, err := services.HashPassword(req.Password)
 	if err != nil {
@@ -75,12 +88,17 @@ func RegisterHandler(c buffalo.Context) error {
 	}
 
 	user := &models.User{
-		ID:           uuid.Must(uuid.NewV4()),
-		Username:     req.Username,
-		Email:        req.Email,
-		PasswordHash: passwordHash,
-		FirstName:    req.FirstName,
-		LastName:     req.LastName,
+		ID:               uuid.Must(uuid.NewV4()),
+		Username:         req.Username,
+		Email:            req.Email,
+		PasswordHash:     passwordHash,
+		FirstName:        req.FirstName,
+		LastName:         req.LastName,
+		Role:             req.Role,
+		BusinessName:     strings.TrimSpace(req.BusinessName),
+		Phone:            strings.TrimSpace(req.Phone),
+		Location:         strings.TrimSpace(req.Location),
+		LightningAddress: strings.TrimSpace(req.LightningAddress),
 	}
 
 	tx := c.Value("tx").(*pop.Connection)
@@ -99,11 +117,18 @@ func RegisterHandler(c buffalo.Context) error {
 		}))
 	}
 
+	c.Session().Set("user_id", user.ID.String())
+
 	return c.Render(http.StatusCreated, r.JSON(map[string]interface{}{"user": map[string]interface{}{
-		"id":         user.ID,
-		"name":       strings.TrimSpace(user.FirstName + " " + user.LastName),
-		"email":      user.Email,
-		"role":       req.Role,
+		"id":               user.ID,
+		"name":             strings.TrimSpace(user.FirstName + " " + user.LastName),
+		"email":            user.Email,
+		"role":             user.Role,
+		"businessName":     user.BusinessName,
+		"phone":            user.Phone,
+		"location":         user.Location,
+		"lightningAddress": user.LightningAddress,
+		"balanceSats":      user.BalanceSats,
 	}}))
 }
 
@@ -116,19 +141,20 @@ func LoginHandler(c buffalo.Context) error {
 		}))
 	}
 
-	if req.Username == "" || req.Password == "" {
-		req.Username = strings.TrimSpace(req.Email)
+	identifier := strings.TrimSpace(req.Username)
+	if identifier == "" {
+		identifier = strings.TrimSpace(req.Email)
 	}
-	if req.Username == "" || req.Password == "" {
+	if identifier == "" || req.Password == "" {
 		return c.Render(http.StatusBadRequest, r.JSON(map[string]string{
-			"error": "username and password are required",
+			"error": "email and password are required",
 		}))
 	}
 
 	tx := c.Value("tx").(*pop.Connection)
 
 	user := &models.User{}
-	if err := tx.Where("username = ? OR email = ?", req.Username, strings.ToLower(req.Username)).First(user); err != nil {
+	if err := tx.Where("LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)", identifier, identifier).First(user); err != nil {
 		return c.Render(http.StatusUnauthorized, r.JSON(map[string]string{
 			"error": "invalid username or password",
 		}))
@@ -143,10 +169,15 @@ func LoginHandler(c buffalo.Context) error {
 	c.Session().Set("user_id", user.ID.String())
 
 	return c.Render(http.StatusOK, r.JSON(map[string]interface{}{"user": map[string]interface{}{
-		"id":         user.ID,
-		"name":       strings.TrimSpace(user.FirstName + " " + user.LastName),
-		"email":      user.Email,
-		"role":       "farmer",
+		"id":               user.ID,
+		"name":             strings.TrimSpace(user.FirstName + " " + user.LastName),
+		"email":            user.Email,
+		"role":             user.Role,
+		"businessName":     user.BusinessName,
+		"phone":            user.Phone,
+		"location":         user.Location,
+		"lightningAddress": user.LightningAddress,
+		"balanceSats":      user.BalanceSats,
 	}}))
 }
 
@@ -163,10 +194,17 @@ func MeHandler(c buffalo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, r.JSON(map[string]interface{}{
-		"id":         user.ID,
-		"name":       strings.TrimSpace(user.FirstName + " " + user.LastName),
-		"email":      user.Email,
-		"role":       "farmer",
+		"id":               user.ID,
+		"name":             strings.TrimSpace(user.FirstName + " " + user.LastName),
+		"email":            user.Email,
+		"role":             user.Role,
+		"businessName":     user.BusinessName,
+		"phone":            user.Phone,
+		"location":         user.Location,
+		"lightningAddress": user.LightningAddress,
+		"balanceSats":      user.BalanceSats,
+		"rating":           user.Rating,
+		"completedPickups": user.CompletedPickups,
 	}))
 }
 
