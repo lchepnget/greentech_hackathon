@@ -1,0 +1,1 @@
+import {api} from './client'; import type {Listing,MarketplaceSummary} from './types'; export const getListings=(q='')=>api<Listing[]>(`/listings${q?`?${q}`:''}`); export const getListing=(id:string)=>api<Listing>(`/listings/${id}`); export const getSummary=()=>api<MarketplaceSummary>('/listings/summary');
