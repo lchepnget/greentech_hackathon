@@ -1,4 +1,3 @@
-
 # Environment files
 .env
 .env.*
@@ -23,7 +22,6 @@ Thumbs.db
 # Node
 node_modules/
 dist/
-=======
 # Binaries
 /financial-gateway
 greentech-backend
