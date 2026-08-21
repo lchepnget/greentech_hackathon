@@ -46,6 +46,7 @@ func App() *buffalo.App {
 			Env:         ENV,
 			SessionName: "_backend_session",
 		})
+		app.Use(corsMiddleware)
 
 		// Automatically redirect to SSL
 		app.Use(forceSSL())
@@ -69,11 +70,49 @@ func App() *buffalo.App {
 		app.POST("/api/auth/login", LoginHandler)
 		app.GET("/api/auth/me", RequireAuth(MeHandler))
 		app.POST("/api/auth/logout", RequireAuth(LogoutHandler))
+		// Marketplace, wallet and payment endpoints consumed by the Svelte frontend.
+		app.GET("/api/listings", FrontendListings)
+		app.GET("/api/listings/summary", FrontendListingSummary)
+		app.GET("/api/listings/{id}", FrontendListingByID)
+		app.POST("/api/listings", FrontendCreateListing)
+		app.GET("/api/orders", FrontendOrders)
+		app.POST("/api/orders", FrontendCreateOrder)
+		app.POST("/api/invoices", FrontendCreateInvoice)
+		app.GET("/api/invoices/{id}/status", FrontendInvoiceStatus)
+		app.GET("/api/wallet", FrontendWallet)
+		app.GET("/api/wallet/transactions", FrontendWalletTransactions)
+		app.POST("/api/wallet/deposit", FrontendWalletDeposit)
+		app.POST("/api/wallet/withdraw", FrontendWalletWithdraw)
+		app.PATCH("/api/users/me", FrontendUpdateUser)
+		app.POST("/api/auth/forgot-password", FrontendForgotPassword)
+		app.POST("/api/auth/reset-password", FrontendResetPassword)
+		app.OPTIONS("/{path:.*}", func(c buffalo.Context) error {
+			return c.Render(http.StatusNoContent, r.String(""))
+		})
 
 		app.ServeFiles("/", http.FS(public.FS())) // serve files from the public directory
 	})
 
 	return app
+}
+
+// corsMiddleware allows the local Svelte frontend to call the API with its
+// session cookie and handles browser preflight requests before route matching.
+func corsMiddleware(next buffalo.Handler) buffalo.Handler {
+	return func(c buffalo.Context) error {
+		origin := c.Request().Header.Get("Origin")
+		if origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173" {
+			c.Response().Header().Set("Access-Control-Allow-Origin", origin)
+			c.Response().Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Response().Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			c.Response().Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			c.Response().Header().Add("Vary", "Origin")
+		}
+		if c.Request().Method == http.MethodOptions {
+			return c.Render(http.StatusNoContent, r.String(""))
+		}
+		return next(c)
+	}
 }
 
 // translations will load locale files, set up the translator `actions.T`,
