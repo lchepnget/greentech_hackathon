@@ -21,8 +21,7 @@ If you created the services manually, set the API service **Root Directory** to
 
 ```text
 Build:  cd backend && go build -o bin/regenfeed ./cmd/app && go build -o bin/migrate ./cmd/migrate
-Pre-deploy: cd backend && ./bin/migrate
-Start: cd backend && ./bin/regenfeed
+Start: cd backend && ./bin/migrate && ./bin/regenfeed
 ```
 
 ## Required backend secrets
@@ -32,7 +31,7 @@ Start: cd backend && ./bin/regenfeed
 - `BLINK_PLATFORM_WALLET_ADDRESS`
 - M-Pesa credentials and callback URLs listed in `render.yaml`
 
-Render generates `SESSION_SECRET` and injects `DATABASE_URL`. The backend pre-deploy command applies the SQL migration once and records it in `regenfeed_migrations`.
+Render generates `SESSION_SECRET` and injects `DATABASE_URL`. The backend start command applies the SQL migration once and records it in `regenfeed_migrations` before starting the API. This works on Render free-tier services, which do not support pre-deploy commands.
 
 ## Payment callback URLs
 
