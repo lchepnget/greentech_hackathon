@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -98,22 +100,72 @@ func HandleCreateListingInvoice(c buffalo.Context) error {
 		Name        string `json:"name"`
 		Description string `json:"description"`
 		PriceSats   int64  `json:"priceSats"`
+		WasteType   string `json:"wasteType"`
+		Quantity    string `json:"quantity"`
+		Unit        string `json:"unit"`
+		Location    string `json:"location"`
 	}
-	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil || strings.TrimSpace(req.Name) == "" || req.PriceSats < 1 {
-		return c.Render(400, r.JSON(map[string]string{"error": "name, description and positive priceSats are required"}))
+	var imageData string
+	if strings.HasPrefix(c.Request().Header.Get("Content-Type"), "multipart/form-data") {
+		if err := c.Request().ParseMultipartForm(6 << 20); err != nil {
+			return c.Render(400, r.JSON(map[string]string{"error": "invalid multipart payload"}))
+		}
+		req.Name, req.Description, req.WasteType, req.Quantity, req.Unit, req.Location = c.Request().FormValue("title"), c.Request().FormValue("description"), c.Request().FormValue("wasteType"), c.Request().FormValue("quantity"), c.Request().FormValue("unit"), c.Request().FormValue("location")
+		if _, err := fmt.Sscan(c.Request().FormValue("priceSats"), &req.PriceSats); err != nil {
+			req.PriceSats = 0
+		}
+		if file, header, err := c.Request().FormFile("photos"); err == nil {
+			defer file.Close()
+			if header.Size > 5<<20 {
+				return c.Render(413, r.JSON(map[string]string{"error": "image must be 5 MB or smaller"}))
+			}
+			content, err := io.ReadAll(io.LimitReader(file, 5<<20+1))
+			if err != nil || len(content) > 5<<20 {
+				return c.Render(400, r.JSON(map[string]string{"error": "unable to read image"}))
+			}
+			imageData = "data:" + header.Header.Get("Content-Type") + ";base64," + base64.StdEncoding.EncodeToString(content)
+		}
+	} else if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.Render(400, r.JSON(map[string]string{"error": "invalid payload"}))
+	}
+	if strings.TrimSpace(req.Name) == "" || req.PriceSats < 1 {
+		return c.Render(400, r.JSON(map[string]string{"error": "name and positive priceSats are required"}))
 	}
 	inv, err := createBlinkDepositInvoice(c.Request().Context(), req.PriceSats)
 	if err != nil {
 		return c.Render(502, r.JSON(map[string]string{"error": "unable to create Blink invoice"}))
 	}
 	if strings.TrimSpace(inv.PaymentRequest) == "" {
-		return c.Render(http.StatusBadGateway, r.JSON(map[string]string{"error": "Blink returned an empty invoice"}))
+		return c.Render(502, r.JSON(map[string]string{"error": "Blink returned an empty invoice"}))
 	}
-	x := map[string]interface{}{"id": fmt.Sprintf("listing_%d", time.Now().UnixNano()), "ownerId": userID.String(), "producerName": strings.TrimSpace(user.FirstName + " " + user.LastName), "title": req.Name, "description": req.Description, "priceSats": req.PriceSats, "bolt11": inv.PaymentRequest, "invoice": inv.PaymentRequest, "status": "active"}
+	x := map[string]interface{}{"id": fmt.Sprintf("listing_%d", time.Now().UnixNano()), "ownerId": userID.String(), "producerName": strings.TrimSpace(user.FirstName + " " + user.LastName), "title": req.Name, "description": req.Description, "wasteType": req.WasteType, "quantity": req.Quantity, "unit": req.Unit, "location": req.Location, "priceSats": req.PriceSats, "bolt11": inv.PaymentRequest, "invoice": inv.PaymentRequest, "status": "active"}
+	if imageData != "" {
+		x["image"] = imageData
+	}
 	frontStore.Lock()
 	frontStore.listings = append(frontStore.listings, x)
 	frontStore.Unlock()
 	return c.Render(201, r.JSON(x))
+}
+
+func FrontendDeleteListing(c buffalo.Context) error {
+	userID, ok := c.Value("user_id").(uuid.UUID)
+	if !ok {
+		return c.Render(401, r.JSON(map[string]string{"error": "authentication required"}))
+	}
+	id := c.Param("id")
+	frontStore.Lock()
+	defer frontStore.Unlock()
+	for i, listing := range frontStore.listings {
+		if listing["id"] == id {
+			if listing["ownerId"] != userID.String() {
+				return c.Render(403, r.JSON(map[string]string{"error": "you can only delete your own listings"}))
+			}
+			frontStore.listings = append(frontStore.listings[:i], frontStore.listings[i+1:]...)
+			return c.Render(204, r.String(""))
+		}
+	}
+	return c.Render(404, r.JSON(map[string]string{"error": "listing not found"}))
 }
 
 func HandleVerifyPayment(c buffalo.Context) error {

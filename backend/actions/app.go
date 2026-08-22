@@ -91,6 +91,7 @@ func App() *buffalo.App {
 		app.GET("/api/listings/summary", FrontendListingSummary)
 		app.GET("/api/listings/{id}", FrontendListingByID)
 		app.POST("/api/listings", RequireAuth(HandleCreateListingInvoice))
+		app.DELETE("/api/listings/{id}", RequireAuth(FrontendDeleteListing))
 		app.GET("/api/orders", RequireAuth(FrontendOrders))
 		app.POST("/api/orders", RequireAuth(FrontendCreateOrder))
 		app.POST("/api/invoices/verify", RequireAuth(HandleVerifyPayment))

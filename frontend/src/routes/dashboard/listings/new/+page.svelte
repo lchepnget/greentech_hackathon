@@ -49,7 +49,7 @@
 		files.forEach((f) => data.append('photos', f));
 
 		try {
-			await listings.create({name:title,description,priceSats:Number(price)});
+			await listings.create(data);
 			await goto('/dashboard');
 		} catch (e) {
 			status = e instanceof Error ? e.message : 'Upload failed. Please try again.';
